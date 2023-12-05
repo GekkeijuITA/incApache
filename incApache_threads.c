@@ -181,8 +181,8 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
-
-
+	pthread_mutex_lock(&mime_mutex);
+	
 /*** TO BE DONE 7.0 END ***/
 
 	fprintf(mime_request_stream, "%s\n", filename);
@@ -193,7 +193,7 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
-
+	pthread_mutex_unlock(&mime_mutex);
 
 /*** TO BE DONE 7.0 END ***/
 
