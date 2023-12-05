@@ -48,6 +48,10 @@ int get_new_UID(void)
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
 
+	pthread_mutex_lock(&cookie_mutex);
+	retval = (CurUID % MAX_COOKIES) + 1;
+	UserTracker[retval] = 0;
+	pthread_mutex_unlock(&cookie_mutex);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -65,6 +69,10 @@ int keep_track_of_UID(int myUID)
      *** Be careful in order to avoid race conditions ***/
 /*** TO BE DONE 7.0 START ***/
 
+	pthread_mutex_lock(&cookie_mutex);
+	UserTracker[myUID]++;	// da verificare
+	newcount = UserTracker[myUID]/*++*/;
+	pthread_mutex_unlock(&cookie_mutex);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -96,6 +104,7 @@ void send_response(int client_fd, int response_code, int cookie,
 	/*** Compute date of servicing current HTTP Request using a variant of gmtime() ***/
 /*** TO BE DONE 7.0 START ***/
 
+	now_t = my_timegm(&now_tm);
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -130,6 +139,10 @@ void send_response(int client_fd, int response_code, int cookie,
 			/*** compute file_size and file_modification_time ***/
 /*** TO BE DONE 7.0 START ***/
 
+	file_size = stat_p->st_size;
+	file_modification_tm = stat_p->st_mtime;
+	file_modification_time = my_timegm(&file_modification_tm);
+	//FINISCI
 
 /*** TO BE DONE 7.0 END ***/
 

@@ -77,6 +77,7 @@ time_t my_timegm(struct tm *tm)
         /*** Guess what is missing here ... ***/
 /*** TO BE DONE 7.0 START ***/
 
+	tz = getenv("TZ");
 
 /*** TO BE DONE 7.0 END ***/
 
@@ -92,6 +93,7 @@ time_t my_timegm(struct tm *tm)
         /*** Guess what is missing here ... ***/
 /*** TO BE DONE 7.0 START ***/
 
+	tzset();
 
 /*** TO BE DONE 7.0 END ***/
 
