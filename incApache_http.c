@@ -209,7 +209,7 @@ void send_response(int client_fd, int response_code, int cookie,
 	{
 		/*** set permanent cookie in order to identify this client ***/
 		/*** TO BE DONE 7.0 START ***/
-		strcat(http_header, "\r\nCookie: UID=");
+		strcat(http_header, "\r\nCookie: UserID=");
 		strcat(http_header, cookie);
 		strcat(http_header, COOKIE_EXPIRE);
 		/*** TO BE DONE 7.0 END ***/
@@ -321,7 +321,9 @@ void manage_http_requests(int client_fd
 		/*** parse first line defining the 3 strings method_str,
 		 *** filename, and protocol ***/
 		/*** TO BE DONE 7.0 START ***/
-		// Usare strtok_r (usando come puntatore strtok_save)
+		method_str = strtok_r(http_request_line, " ", &strtokr_save);
+		filename = strtok_r(NULL, " ", &strtokr_save);
+		protocol = strtok_r(NULL, " ", &strtokr_save);
 		/*** TO BE DONE 7.0 END ***/
 
 		debug("   ... method_str=%s, filename=%s (0=%c), protocol=%s (len=%d)\n",
@@ -363,18 +365,30 @@ void manage_http_requests(int client_fd
 				{
 					/*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 					/*** TO BE DONE 7.0 START ***/
-
+					char* s;
+					s = strtok_r(NULL, "=", &strtokr_save);
+					if(strcmp(s, "UserID") == 0)
+					{
+						s = strtok_r(NULL, ";", &strtokr_save);
+						UIDcookie = atoi(s);
+					}
 					/*** TO BE DONE 7.0 END ***/
 				}
 				if (http_method == METHOD_GET)
 				{
-
 					/*** parse option line, recognize "If-Modified-Since" option,
 					 *** and possibly add METHOD_CONDITIONAL flag to http_method
 					 *** and store date in since_tm
 					 ***/
 					/*** TO BE DONE 7.0 START ***/
-
+					if(strcmp(option_name, "If-Modified-Since") == 0)
+					{
+						char* time;
+						time = strtok_r(NULL, ":", &strtokr_save);
+						time = strtok_r(NULL, " ;", %strtokr_save);
+						http_method = METHOD_CONDITIONAL;
+						since_tm = *gmtime(time);
+					}
 					/*** TO BE DONE 7.0 END ***/
 				}
 			}
@@ -436,7 +450,13 @@ void manage_http_requests(int client_fd
 				 *** Use something like timegm() to convert from struct tm to time_t
 				 ***/
 				/*** TO BE DONE 7.0 START ***/
+				time_t since_time = timegm(since_tm);
+				time_t since_time_file = my_timegm(gmtime_r(&stat_p->st_mtime, &since_tm));
 
+				if(difftime(since_time, since_time_file) > 0) // Significa che il file è stato cambiato di recente nel server
+				{
+					http_method = METHOD_NOT_CHANGED;
+				}
 				/*** TO BE DONE 7.0 END ***/
 			}
 			switch (http_method)
@@ -470,7 +490,7 @@ void manage_http_requests(int client_fd
 			case METHOD_POST:
 
 				/*** TO BE OPTIONALLY DONE START ***/
-
+				
 				/*** TO BE OPTIONALLY DONE END ***/
 
 			default:
