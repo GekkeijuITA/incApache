@@ -127,7 +127,6 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
     int connection_no[MAX_CONNECTIONS];
 
 #endif /* ifdef INCaPACHE_7_1 */
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 void *client_connection_thread(void *vp)

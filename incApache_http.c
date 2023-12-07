@@ -385,7 +385,7 @@ void manage_http_requests(int client_fd
 					{
 						char* time;
 						time = strtok_r(NULL, ":", &strtokr_save);
-						time = strtok_r(NULL, " ;", %strtokr_save);
+						time = strtok_r(NULL, " ;", &strtokr_save);
 						http_method = METHOD_CONDITIONAL;
 						since_tm = *gmtime(time);
 					}
@@ -450,7 +450,7 @@ void manage_http_requests(int client_fd
 				 *** Use something like timegm() to convert from struct tm to time_t
 				 ***/
 				/*** TO BE DONE 7.0 START ***/
-				time_t since_time = timegm(since_tm);
+				time_t since_time = timegm(&since_tm);
 				time_t since_time_file = my_timegm(gmtime_r(&stat_p->st_mtime, &since_tm));
 
 				if(difftime(since_time, since_time_file) > 0) // Significa che il file è stato cambiato di recente nel server
