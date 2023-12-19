@@ -143,7 +143,7 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size and file_modification_time ***/
 			/*** TO BE DONE 7.0 START ***/
-
+debug("Arrived here\n");
 			file_size = stat_p->st_size;
 			gmtime_r(&stat_p->st_mtime, &file_modification_tm);
 			file_modification_time = my_timegm(&file_modification_tm);
@@ -222,6 +222,7 @@ void send_response(int client_fd, int response_code, int cookie,
 	strcat(http_header, "\r\nServer: incApache 7.0 for SETI.\r\n");
 	strcat(http_header, "Connection: close\r\n");
 #endif
+
 	if (file_size > 0 && mime_type != NULL)
 	{
 		sprintf(http_header + strlen(http_header), "Content-Length: %lu \r\nContent-Type: %s\r\nLast-Modified: ", (unsigned long)file_size, mime_type);
@@ -260,7 +261,7 @@ void send_response(int client_fd, int response_code, int cookie,
 
 		/*** send fd file on client_fd, then close fd; see syscall sendfile  ***/
 		/*** TO BE DONE 7.0 START ***/
-		if (sendfile(fd, client_fd, NULL, sizeof(fd)) == -1)
+		if (sendfile(fd, client_fd, NULL, file_size) == -1)
 			fail_errno("incApache: could not send file");
 		if (close(fd) == -1)
 			fail_errno("incApache: could not close file descriptor");
@@ -323,7 +324,8 @@ void manage_http_requests(int client_fd
 		/*** TO BE DONE 7.0 START ***/
 		method_str = strtok_r(http_request_line, " ", &strtokr_save);
 		filename = strtok_r(NULL, " ", &strtokr_save);
-		protocol = strtok_r(NULL, " ", &strtokr_save);
+		protocol = strtok_r(NULL, "\r\n", &strtokr_save);
+
 		/*** TO BE DONE 7.0 END ***/
 
 		debug("   ... method_str=%s, filename=%s (0=%c), protocol=%s (len=%d)\n",

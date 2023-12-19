@@ -1,4 +1,4 @@
-/* 
+/*
  * incApache_main.c: implementazione del main per il web server del corso di SETI
  *
  * Programma sviluppato a supporto del laboratorio di
@@ -61,34 +61,35 @@ void run_file(const int *p_to_file, const int *p_from_file)
 		fail_errno("close p_from_file read-end");
 	if (dup2(p_from_file[PIPE_WRITE_END], STDOUT_FILENO) == -1)
 		fail_errno("dup2 stdout");
-	execlp("file", "file", "--no-buffer", "--brief", "--mime", "--files-from", "-", (char *) NULL);
+	execlp("file", "file", "--no-buffer", "--brief", "--mime", "--files-from", "-", (char *)NULL);
 	fprintf(stderr, "Cannot exec \"file\"\n");
 	exit(-1);
 }
 
 void run_webserver(const char *const port_as_str, char *www_root, const int *const p_to_file,
-		   const int *const p_from_file)
+				   const int *const p_from_file)
 {
 	int i;
 
 	/*** perform chroot to www_root; then, create, bind, and listen to
 	 *** listen_fd, and eventually drop root privileges ***/
-	if (chroot(www_root) < 0) {
+	if (chroot(www_root) < 0)
+	{
 #ifndef PRETEND_TO_BE_ROOT
 		fail_errno("Cannot chroot");
 #endif /* #ifndef PRETEND_TO_BE_ROOT */
 	}
 
-/*** TO BE DONE 7.0 START ***/
+	/*** TO BE DONE 7.0 START ***/
 
 	create_listening_socket(port_as_str);
 	drop_privileges();
 
-/*** TO BE DONE 7.0 END ***/
+	/*** TO BE DONE 7.0 END ***/
 
 #ifdef INCaPACHE_7_1
 	printf("Server HTTP 1.1 (with pipelining support)");
-#else /* #ifdef INCaPACHE_7_1 */
+#else  /* #ifdef INCaPACHE_7_1 */
 	printf("Server HTTP 1.0");
 #endif /* #ifdef INCaPACHE_7_1 */
 	printf(" listening on port %s\nwith WWW root set to %s\n\n", port_as_str, www_root);
@@ -107,23 +108,24 @@ void run_webserver(const char *const port_as_str, char *www_root, const int *con
 	for (i = MAX_CONNECTIONS; i < MAX_THREADS; i++)
 		connection_no[i] = FREE_SLOT;
 #endif /* #ifdef INCaPACHE_7_1 */
-	for (i = 0; i < MAX_CONNECTIONS; i++) {
+	for (i = 0; i < MAX_CONNECTIONS; i++)
+	{
 		connection_no[i] = i;
 #ifdef INCaPACHE_7_1
 		no_response_threads[i] = 0;
 #endif /* #ifdef INCaPACHE_7_1 */
 
 		/*** create PTHREAD number i, running client_connection_thread() ***/
-/*** TO BE DONE 7.0 START ***/
+		/*** TO BE DONE 7.0 START ***/
 
-	for(i=0; i < MAX_CONNECTIONS; i++){
-		thread_ids[i] = i;
-		if(pthread_create(&thread_ids[i], NULL, client_connection_thread(thread_ids[i]), NULL) == -1)
-			fail_errno("PHTREAD failed to create");
-	}
+		for (i = 0; i < MAX_CONNECTIONS; i++)
+		{
+			thread_ids[i] = i;
+			if (pthread_create(&thread_ids[i], NULL, client_connection_thread, &connection_no[i]) == -1)
+				fail_errno("PHTREAD failed to create");
+		}
 
-/*** TO BE DONE 7.0 END ***/
-
+		/*** TO BE DONE 7.0 END ***/
 	}
 	for (i = 0; i < MAX_CONNECTIONS; i++)
 		if (pthread_join(thread_ids[i], NULL))
@@ -139,14 +141,16 @@ void run_webserver(const char *const port_as_str, char *www_root, const int *con
 void check_uids()
 {
 #ifndef PRETEND_TO_BE_ROOT
-	if (geteuid()) {
+	if (geteuid())
+	{
 		fprintf(stderr, "The effective UID should be zero (that is, the executable should be owned by root and have the SETUID flag on).\n");
 		exit(EXIT_FAILURE);
 	}
 #endif /* #ifndef PRETEND_TO_BE_ROOT */
-	if (getuid() == 0) {
+	if (getuid() == 0)
+	{
 		fprintf(stderr,
-			"The real UID should be non-zero (that is, the executable should be run by a non-root account).\n");
+				"The real UID should be non-zero (that is, the executable should be run by a non-root account).\n");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -163,7 +167,8 @@ int main(int argc, char **argv)
 	fprintf(stderr, "\n\n\n*** Debug UNSAFE version - DO NOT DISTRIBUTE ***\n\n");
 #endif /* #ifdef PRETEND_TO_BE_ROOT */
 	check_uids();
-	if (argc < 2 || argc > 3) {
+	if (argc < 2 || argc > 3)
+	{
 		fprintf(stderr, "Usage: %s <www-root> [<port-number>]\nDefault port: %s\n", *argv, default_port);
 		return EXIT_FAILURE;
 	}
@@ -183,8 +188,7 @@ int main(int argc, char **argv)
 		fail_errno("Cannot fork");
 	if (pid == 0)
 		run_file(p_to_file, p_from_file);
-            else
-	        run_webserver(port_as_str, www_root, p_to_file, p_from_file);
+	else
+		run_webserver(port_as_str, www_root, p_to_file, p_from_file);
 	return EXIT_SUCCESS;
 }
-
