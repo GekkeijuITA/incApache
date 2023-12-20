@@ -102,7 +102,8 @@ void send_response(int client_fd, int response_code, int cookie,
 	/*** Compute date of servicing current HTTP Request using a variant of gmtime() ***/
 	/*** TO BE DONE 7.0 START ***/
 
-	now_t = my_timegm(&now_tm);
+	//now_t = my_timegm(&now_tm);
+	gmtime_r(&now_t, &now_tm);
 
 	/*** TO BE DONE 7.0 END ***/
 
@@ -173,9 +174,9 @@ void send_response(int client_fd, int response_code, int cookie,
 		{
 			/*** compute file_size, mime_type, and file_modification_time of HTML_404 ***/
 			/*** TO BE DONE 7.0 START ***/
-			file_size = stat_p->st_size;
-			gmtime_r(&stat_p->st_mtime, &file_modification_tm);
-			file_modification_time = my_timegm(&file_modification_tm);
+			fstat(fd, &stat_buffer);
+			file_size = stat_buffer.st_size;
+			file_modification_time = stat_buffer.st_mtime;
 			mime_type = get_mime_type(HTML_404);
 			/*** TO BE DONE 7.0 END ***/
 		}
@@ -195,9 +196,9 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size, mime_type, and file_modification_time of HTML_501 ***/
 			/*** TO BE DONE 7.0 START ***/
-			file_size = stat_p->st_size;
-			gmtime_r(&stat_p->st_mtime, &file_modification_tm);
-			file_modification_time = my_timegm(&file_modification_tm);
+			fstat(fd, &stat_buffer);
+			file_size = stat_buffer.st_size;
+			file_modification_time = stat_buffer.st_mtime;
 			mime_type = get_mime_type(HTML_501);
 			/*** TO BE DONE 7.0 END ***/
 		}
@@ -205,7 +206,7 @@ void send_response(int client_fd, int response_code, int cookie,
 	}
 	strcat(http_header, "\r\nDate: ");
 	strcat(http_header, time_as_string);
-	
+
 	if (cookie >= 0)
 	{
 		/*** set permanent cookie in order to identify this client ***/
@@ -213,7 +214,7 @@ void send_response(int client_fd, int response_code, int cookie,
 		strcat(http_header, "\r\nCookie: UserID=");
 
 		char *cookieStr = malloc(sizeof(char) * 10);
-		if(!cookieStr)
+		if (!cookieStr)
 			fail_errno("incApache: could not allocate memory for cookie string");
 		sprintf(cookieStr, "%d", cookie);
 		strcat(http_header, cookieStr);
@@ -231,7 +232,7 @@ void send_response(int client_fd, int response_code, int cookie,
 	strcat(http_header, "\r\nServer: incApache 7.0 for SETI.\r\n");
 	strcat(http_header, "Connection: close\r\n");
 #endif
-	
+
 	if (file_size > 0 && mime_type != NULL)
 	{
 		sprintf(http_header + strlen(http_header), "Content-Length: %lu \r\nContent-Type: %s\r\nLast-Modified: ", (unsigned long)file_size, mime_type);
@@ -327,7 +328,7 @@ void manage_http_requests(int client_fd
 #ifdef INCaPACHE_7_1
 		thread_idx = find_unused_thread_idx(connection_no);
 #endif
-
+		debug("HTTP request line: %s\n", http_request_line);
 		/*** parse first line defining the 3 strings method_str,
 		 *** filename, and protocol ***/
 		/*** TO BE DONE 7.0 START ***/
@@ -376,9 +377,9 @@ void manage_http_requests(int client_fd
 				{
 					/*** parse the cookie in order to get the UserID and count the number of requests coming from this client ***/
 					/*** TO BE DONE 7.0 START ***/
-					char* s;
+					char *s;
 					s = strtok_r(NULL, "=", &strtokr_save);
-					if(strcmp(s, "UserID") == 0)
+					if (strcmp(s, "UserID") == 0)
 					{
 						s = strtok_r(NULL, ";", &strtokr_save);
 						UIDcookie = atoi(s);
@@ -392,13 +393,13 @@ void manage_http_requests(int client_fd
 					 *** and store date in since_tm
 					 ***/
 					/*** TO BE DONE 7.0 START ***/
-					if(strcmp(option_name, "If-Modified-Since") == 0)
+					if (strcmp(option_name, "If-Modified-Since") == 0)
 					{
-						char* time;
+						char *time;
 						time = strtok_r(NULL, ":", &strtokr_save);
 						time = strtok_r(NULL, " ;", &strtokr_save);
-						http_method = METHOD_CONDITIONAL;
-						since_tm = *gmtime(time);
+						strptime(time, "%a, %d %b %Y %T GMT", &since_tm);
+						http_method |= METHOD_CONDITIONAL;
 					}
 					/*** TO BE DONE 7.0 END ***/
 				}
@@ -462,11 +463,15 @@ void manage_http_requests(int client_fd
 				 ***/
 				/*** TO BE DONE 7.0 START ***/
 				time_t since_time = timegm(&since_tm);
-				time_t since_time_file = my_timegm(gmtime_r(&stat_p->st_mtime, &since_tm));
+				time_t since_time_file = stat_p->st_mtime;
 
-				if(difftime(since_time, since_time_file) > 0) // Significa che il file è stato cambiato di recente nel server
+				if (difftime(since_time, since_time_file) > 0) // Significa che il file è stato cambiato di recente nel server
 				{
 					http_method = METHOD_NOT_CHANGED;
+				}
+				else
+				{
+					http_method = http_method & ~METHOD_CONDITIONAL;
 				}
 				/*** TO BE DONE 7.0 END ***/
 			}
@@ -501,7 +506,7 @@ void manage_http_requests(int client_fd
 			case METHOD_POST:
 
 				/*** TO BE OPTIONALLY DONE START ***/
-				
+
 				/*** TO BE OPTIONALLY DONE END ***/
 
 			default:
