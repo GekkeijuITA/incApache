@@ -143,7 +143,7 @@ void send_response(int client_fd, int response_code, int cookie,
 
 			/*** compute file_size and file_modification_time ***/
 			/*** TO BE DONE 7.0 START ***/
-debug("Arrived here\n");
+
 			file_size = stat_p->st_size;
 			gmtime_r(&stat_p->st_mtime, &file_modification_tm);
 			file_modification_time = my_timegm(&file_modification_tm);
@@ -205,15 +205,24 @@ debug("Arrived here\n");
 	}
 	strcat(http_header, "\r\nDate: ");
 	strcat(http_header, time_as_string);
+	
 	if (cookie >= 0)
 	{
 		/*** set permanent cookie in order to identify this client ***/
 		/*** TO BE DONE 7.0 START ***/
 		strcat(http_header, "\r\nCookie: UserID=");
-		strcat(http_header, cookie);
+
+		char *cookieStr = malloc(sizeof(char) * 10);
+		if(!cookieStr)
+			fail_errno("incApache: could not allocate memory for cookie string");
+		sprintf(cookieStr, "%d", cookie);
+		strcat(http_header, cookieStr);
+		free(cookieStr);
+
 		strcat(http_header, COOKIE_EXPIRE);
 		/*** TO BE DONE 7.0 END ***/
 	}
+
 #ifdef INCaPACHE_7_1
 	strcat(http_header, "\r\nServer: incApache 7.1 for SETI.\r\n");
 	if (response_code >= 500 || is_http1_0)
@@ -222,7 +231,7 @@ debug("Arrived here\n");
 	strcat(http_header, "\r\nServer: incApache 7.0 for SETI.\r\n");
 	strcat(http_header, "Connection: close\r\n");
 #endif
-
+	
 	if (file_size > 0 && mime_type != NULL)
 	{
 		sprintf(http_header + strlen(http_header), "Content-Length: %lu \r\nContent-Type: %s\r\nLast-Modified: ", (unsigned long)file_size, mime_type);
@@ -230,7 +239,7 @@ debug("Arrived here\n");
 		/*** compute time_as_string, corresponding to file_modification_time, in GMT standard format;
 			 see gmtime and strftime ***/
 		/*** TO BE DONE 7.0 START ***/
-		strftime(time_as_string, sizeof(time_as_string), "%a, %d %b %Y %T GMT", gmtime(file_modification_time));
+		strftime(time_as_string, sizeof(time_as_string), "%a, %d %b %Y %T GMT", gmtime(&file_modification_time));
 		/*** TO BE DONE 7.0 END ***/
 
 		strcat(http_header, time_as_string);
@@ -261,7 +270,7 @@ debug("Arrived here\n");
 
 		/*** send fd file on client_fd, then close fd; see syscall sendfile  ***/
 		/*** TO BE DONE 7.0 START ***/
-		if (sendfile(fd, client_fd, NULL, file_size) == -1)
+		if (sendfile(client_fd, fd, NULL, file_size) == -1)
 			fail_errno("incApache: could not send file");
 		if (close(fd) == -1)
 			fail_errno("incApache: could not close file descriptor");
