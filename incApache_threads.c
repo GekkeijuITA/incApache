@@ -78,6 +78,13 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** connection_no[i] ***/
 /*** TO BE DONE 7.1 START ***/
 
+	for (i = 0; i < MAX_THREADS; ++i)
+		if (connection_no[i] == conn_no) {
+			pthread_join(thread_ids[i], NULL);
+			connection_no[i] = FREE_SLOT;
+			--no_response_threads[conn_no];
+			++no_free_threads;
+		}
 
 /*** TO BE DONE 7.1 END ***/
 
@@ -97,6 +104,13 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** avoiding race conditions ***/
 /*** TO BE DONE 7.1 START ***/
 
+	if (to_join[thrd_no] != NULL) {
+		pthread_join(*to_join[thrd_no], NULL);
+		conn_no = connection_no[thrd_no];
+		connection_no[thrd_no] = FREE_SLOT;
+		--no_response_threads[conn_no];
+		++no_free_threads;
+	}
 
 /*** TO BE DONE 7.1 END ***/
 
@@ -141,6 +155,7 @@ void *client_connection_thread(void *vp)
 	/*** properly initialize the thread queue to_join ***/
 /*** TO BE DONE 7.1 START ***/
 
+	to_join[connection_no] = NULL;
 
 /*** TO BE DONE 7.1 END ***/
 
@@ -223,6 +238,7 @@ void send_resp_thread(int out_socket, int response_code, int cookie,
 	/*** enqueue the current thread in the "to_join" data structure ***/
 /*** TO BE DONE 7.1 START ***/
 
+	to_join[new_thread_idx] = thread_ids + connection_idx;
 
 /*** TO BE DONE 7.1 END ***/
 
