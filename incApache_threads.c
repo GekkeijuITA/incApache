@@ -83,7 +83,9 @@ void join_all_threads(int conn_no)
 	/*** TO BE DONE 7.1 START ***/
 	if(pthread_mutex_lock(&threads_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
 	i = to_join[conn_no] - thread_ids;
+	if(pthread_mutex_unlock(&threads_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
 	if(pthread_join(thread_ids[i], NULL) == -1) fail_errno("pthread_join() failed");
+	if(pthread_mutex_lock(&threads_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
 	connection_no[i] = FREE_SLOT;
 	if(--no_response_threads[conn_no] > 0) --no_response_threads[conn_no];
 	++no_free_threads;
@@ -109,15 +111,15 @@ void join_prev_thread(int thrd_no)
 	if (to_join[thrd_no] != NULL)
 	{
 		i = to_join[thrd_no] - thread_ids;
-		debug("join_prev_thread(%d): joining thread %lu\n", thrd_no, (unsigned long)(to_join[thrd_no] - thread_ids));
+		if(pthread_mutex_unlock(&threads_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
 		if(pthread_join(*to_join[thrd_no], NULL) == -1) fail_errno("pthread_join() failed");
+		if(pthread_mutex_lock(&threads_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
 		conn_no = connection_no[thrd_no];
 		connection_no[i] = FREE_SLOT;
 		if(--no_response_threads[conn_no] > 0) --no_response_threads[conn_no];
 		++no_free_threads;
 	}
 	if(pthread_mutex_unlock(&threads_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
-	debug("end of join_prev_thread(%d)\n", thrd_no);
 	/*** TO BE DONE 7.1 END ***/
 }
 
@@ -125,7 +127,6 @@ void *response_thread(void *vp)
 {
 	size_t thread_no = ((int *)vp) - connection_no;
 	int connection_idx = *((int *)vp);
-	debug(" ... response_thread() thread_no=%lu, conn_no=%d\n", (unsigned long)thread_no, connection_idx);
 	const size_t i = thread_no - MAX_CONNECTIONS;
 	send_response(client_sockets[connection_idx],
 				  thread_params[i].code,
@@ -134,7 +135,6 @@ void *response_thread(void *vp)
 				  (int)thread_no,
 				  thread_params[i].filename,
 				  thread_params[i].p_stat);
-	debug(" ... response_thread() freeing filename and stat\n");
 	free(thread_params[i].filename);
 	free(thread_params[i].p_stat);
 	return NULL;

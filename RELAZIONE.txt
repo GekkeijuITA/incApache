@@ -1,8 +1,0 @@
-PROBLEMI INCONTRATI
-METODOLOGIA DEBUGGING
-Per la versione 7.0
-Abbiamo usato la console e la funzione "Ispeziona" del browser per verificare la correttezza dei dati
-Per la versione 7.1
-Abbiamo usato JMeter (5.6.2) per verificare la gestione di 100 threads con successo
-LIVELLO COMPLETEZZA DELLA CONSEGNA
-Consegnamo il progetto con 7.0 e 7.1 senza POST
