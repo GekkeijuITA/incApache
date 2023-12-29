@@ -81,18 +81,14 @@ void join_all_threads(int conn_no)
 	 *** no_free_threads, no_response_threads[conn_no], and
 	 *** connection_no[i] ***/
 	/*** TO BE DONE 7.1 START ***/
-	pthread_mutex_lock(&threads_mutex);
-	for (i = 0; i < MAX_THREADS; ++i)
-	{
-		if (connection_no[i] == conn_no)
-		{
-			pthread_join(thread_ids[i], NULL);
-			connection_no[i] = FREE_SLOT;
-			--no_response_threads[conn_no];
-			++no_free_threads;
-		}
-	}
-	pthread_mutex_unlock(&threads_mutex);
+	if(pthread_mutex_lock(&threads_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
+	i = to_join[conn_no] - thread_ids;
+	if(pthread_join(thread_ids[i], NULL) == -1) fail_errno("pthread_join() failed");
+	connection_no[i] = FREE_SLOT;
+	if(--no_response_threads[conn_no] > 0) --no_response_threads[conn_no];
+	++no_free_threads;
+	to_join[conn_no] = NULL;
+	if(pthread_mutex_unlock(&threads_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
 	/*** TO BE DONE 7.1 END ***/
 }
 
@@ -109,17 +105,18 @@ void join_prev_thread(int thrd_no)
 	 *** no_free_threads, no_response_threads[conn_no], and connection_no[i],
 	 *** avoiding race conditions ***/
 	/*** TO BE DONE 7.1 START ***/
-	pthread_mutex_lock(&threads_mutex);
+	if(pthread_mutex_lock(&threads_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
 	if (to_join[thrd_no] != NULL)
 	{
+		i = to_join[thrd_no] - thread_ids;
 		debug("join_prev_thread(%d): joining thread %lu\n", thrd_no, (unsigned long)(to_join[thrd_no] - thread_ids));
-		pthread_join(*to_join[thrd_no], NULL);
+		if(pthread_join(*to_join[thrd_no], NULL) == -1) fail_errno("pthread_join() failed");
 		conn_no = connection_no[thrd_no];
-		connection_no[thrd_no] = FREE_SLOT;
-		--no_response_threads[conn_no];
+		connection_no[i] = FREE_SLOT;
+		if(--no_response_threads[conn_no] > 0) --no_response_threads[conn_no];
 		++no_free_threads;
 	}
-	pthread_mutex_unlock(&threads_mutex);
+	if(pthread_mutex_unlock(&threads_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
 	debug("end of join_prev_thread(%d)\n", thrd_no);
 	/*** TO BE DONE 7.1 END ***/
 }
@@ -204,7 +201,7 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 	/*** TO BE DONE 7.0 START ***/
-	pthread_mutex_lock(&mime_mutex);
+	if(pthread_mutex_lock(&mime_mutex) == -1) fail_errno("pthread_mutex_lock() failed");
 	/*** TO BE DONE 7.0 END ***/
 
 	fprintf(mime_request_stream, "%s\n", filename);
@@ -215,7 +212,7 @@ char *get_mime_type(char *filename)
 
 	/*** What is missing here to avoid race conditions ? ***/
 	/*** TO BE DONE 7.0 START ***/
-	pthread_mutex_unlock(&mime_mutex);
+	if(pthread_mutex_unlock(&mime_mutex) == -1) fail_errno("pthread_mutex_unlock() failed");
 	/*** TO BE DONE 7.0 END ***/
 
 	if (mime_t[--nchars_read] == '\n')
@@ -243,7 +240,8 @@ void send_resp_thread(int out_socket, int response_code, int cookie,
 
 	/*** enqueue the current thread in the "to_join" data structure ***/
 	/*** TO BE DONE 7.1 START ***/
-	to_join[new_thread_idx] = thread_ids + connection_idx;
+	to_join[new_thread_idx] = to_join[connection_idx];
+	to_join[connection_idx] = &thread_ids[new_thread_idx];
 	/*** TO BE DONE 7.1 END ***/
 
 	if (pthread_create(thread_ids + new_thread_idx, NULL, response_thread, connection_no + new_thread_idx))

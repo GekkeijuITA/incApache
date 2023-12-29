@@ -1,5 +1,4 @@
 PROBLEMI INCONTRATI
-Dopo aver testato il web-server con 1000 threads per controllare la gestione di threads numerosi, non sono riuscito a farlo partire.
 METODOLOGIA DEBUGGING
 Per la versione 7.0
 Abbiamo usato la console e la funzione "Ispeziona" del browser per verificare la correttezza dei dati

@@ -117,14 +117,8 @@ void run_webserver(const char *const port_as_str, char *www_root, const int *con
 
 		/*** create PTHREAD number i, running client_connection_thread() ***/
 		/*** TO BE DONE 7.0 START ***/
-
-		for (i = 0; i < MAX_CONNECTIONS; i++)
-		{
-			thread_ids[i] = i;
-			if (pthread_create(&thread_ids[i], NULL, client_connection_thread, &connection_no[i]) == -1)
-				fail_errno("PHTREAD failed to create");
-		}
-
+		if (pthread_create(&thread_ids[i], NULL, client_connection_thread, &connection_no[i]))
+			fail_errno("Cannot create thread");
 		/*** TO BE DONE 7.0 END ***/
 	}
 	for (i = 0; i < MAX_CONNECTIONS; i++)

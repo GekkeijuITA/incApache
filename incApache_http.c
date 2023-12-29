@@ -102,7 +102,6 @@ void send_response(int client_fd, int response_code, int cookie,
 	/*** Compute date of servicing current HTTP Request using a variant of gmtime() ***/
 	/*** TO BE DONE 7.0 START ***/
 
-	//now_t = my_timegm(&now_tm);
 	gmtime_r(&now_t, &now_tm);
 
 	/*** TO BE DONE 7.0 END ***/
