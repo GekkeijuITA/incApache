@@ -196,7 +196,6 @@ char *get_mime_type(char *filename)
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
 	pthread_mutex_lock(&mime_mutex);
-	
 /*** TO BE DONE 7.0 END ***/
 
 	fprintf(mime_request_stream, "%s\n", filename);
@@ -208,7 +207,6 @@ char *get_mime_type(char *filename)
 	/*** What is missing here to avoid race conditions ? ***/
 /*** TO BE DONE 7.0 START ***/
 	pthread_mutex_unlock(&mime_mutex);
-
 /*** TO BE DONE 7.0 END ***/
 
 	if (mime_t[--nchars_read] == '\n')
@@ -237,9 +235,7 @@ void send_resp_thread(int out_socket, int response_code, int cookie,
 
 	/*** enqueue the current thread in the "to_join" data structure ***/
 /*** TO BE DONE 7.1 START ***/
-
 	to_join[new_thread_idx] = thread_ids + connection_idx;
-
 /*** TO BE DONE 7.1 END ***/
 
 	if (pthread_create(thread_ids + new_thread_idx, NULL, response_thread, connection_no + new_thread_idx))
