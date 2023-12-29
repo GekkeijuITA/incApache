@@ -1,4 +1,4 @@
-/* 
+/*
  * incApache_threads.c: implementazione dei thread per il web server del corso di SET
  *
  * Programma sviluppato a supporto del laboratorio di
@@ -22,35 +22,39 @@ pthread_mutex_t accept_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef INCaPACHE_7_1
-    int client_sockets[MAX_CONNECTIONS]; /* for each connection, its socket FD */
-    int no_response_threads[MAX_CONNECTIONS]; /* for each connection, how many response threads */
+int client_sockets[MAX_CONNECTIONS];	  /* for each connection, its socket FD */
+int no_response_threads[MAX_CONNECTIONS]; /* for each connection, how many response threads */
 
-    pthread_t thread_ids[MAX_THREADS];
-    int connection_no[MAX_THREADS]; /* connection_no[i] >= 0 means that i-th thread belongs to connection connection_no[i] */
-    pthread_t *to_join[MAX_THREADS]; /* for each thread, the pointer to the previous (response) thread, if any */
+pthread_t thread_ids[MAX_THREADS];
+int connection_no[MAX_THREADS];	 /* connection_no[i] >= 0 means that i-th thread belongs to connection connection_no[i] */
+pthread_t *to_join[MAX_THREADS]; /* for each thread, the pointer to the previous (response) thread, if any */
 
-    int no_free_threads = MAX_THREADS - 2 * MAX_CONNECTIONS; /* each connection has one thread listening and one reserved for replies */
-    struct response_params thread_params[MAX_THREADS - MAX_CONNECTIONS]; /* params for the response threads (the first MAX_CONNECTIONS threads are waiting/parsing requests) */
+int no_free_threads = MAX_THREADS - 2 * MAX_CONNECTIONS;			 /* each connection has one thread listening and one reserved for replies */
+struct response_params thread_params[MAX_THREADS - MAX_CONNECTIONS]; /* params for the response threads (the first MAX_CONNECTIONS threads are waiting/parsing requests) */
 
-    pthread_mutex_t threads_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects the access to thread-related data structures */
+pthread_mutex_t threads_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects the access to thread-related data structures */
 
-    static int reserve_unused_thread() {
+static int reserve_unused_thread()
+{
 	int idx;
 	for (idx = MAX_CONNECTIONS; idx < MAX_THREADS; ++idx)
-		if (connection_no[idx] == FREE_SLOT) {
+		if (connection_no[idx] == FREE_SLOT)
+		{
 			connection_no[idx] = RESERVED_SLOT;
 			return idx;
 		}
 	assert(0);
 	return -1;
-    }
+}
 
-    int find_unused_thread_idx(int conn_no)
-    {
+int find_unused_thread_idx(int conn_no)
+{
 	int idx = -1;
 	pthread_mutex_lock(&threads_mutex);
-	if (no_response_threads[conn_no] > 0) { /* reserved thread already used, try to find another (unused) one */
-		if (no_free_threads > 0) {
+	if (no_response_threads[conn_no] > 0)
+	{ /* reserved thread already used, try to find another (unused) one */
+		if (no_free_threads > 0)
+		{
 			--no_free_threads;
 			++no_response_threads[conn_no];
 			idx = reserve_unused_thread();
@@ -66,32 +70,34 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	idx = reserve_unused_thread();
 	pthread_mutex_unlock(&threads_mutex);
 	return idx;
-    }
+}
 
-    void join_all_threads(int conn_no)
-    {
+void join_all_threads(int conn_no)
+{
 	size_t i;
 
 	/*** compute the index i of the thread to join,
 	 *** call pthread_join() on thread_ids[i], and update shared variables
 	 *** no_free_threads, no_response_threads[conn_no], and
 	 *** connection_no[i] ***/
-/*** TO BE DONE 7.1 START ***/
-
+	/*** TO BE DONE 7.1 START ***/
+	pthread_mutex_lock(&threads_mutex);
 	for (i = 0; i < MAX_THREADS; ++i)
-		if (connection_no[i] == conn_no) {
+	{
+		if (connection_no[i] == conn_no)
+		{
 			pthread_join(thread_ids[i], NULL);
 			connection_no[i] = FREE_SLOT;
 			--no_response_threads[conn_no];
 			++no_free_threads;
 		}
+	}
+	pthread_mutex_unlock(&threads_mutex);
+	/*** TO BE DONE 7.1 END ***/
+}
 
-/*** TO BE DONE 7.1 END ***/
-
-    }
-
-    void join_prev_thread(int thrd_no)
-    {
+void join_prev_thread(int thrd_no)
+{
 	size_t i;
 	int conn_no;
 	debug("start of join_prev_thread(%d)\n", thrd_no);
@@ -102,43 +108,45 @@ pthread_mutex_t mime_mutex = PTHREAD_MUTEX_INITIALIZER;
 	 *** wait for its termination, and update the shared variables
 	 *** no_free_threads, no_response_threads[conn_no], and connection_no[i],
 	 *** avoiding race conditions ***/
-/*** TO BE DONE 7.1 START ***/
-
-	if (to_join[thrd_no] != NULL) {
+	/*** TO BE DONE 7.1 START ***/
+	pthread_mutex_lock(&threads_mutex);
+	if (to_join[thrd_no] != NULL)
+	{
+		debug("join_prev_thread(%d): joining thread %lu\n", thrd_no, (unsigned long)(to_join[thrd_no] - thread_ids));
 		pthread_join(*to_join[thrd_no], NULL);
 		conn_no = connection_no[thrd_no];
 		connection_no[thrd_no] = FREE_SLOT;
 		--no_response_threads[conn_no];
 		++no_free_threads;
 	}
+	pthread_mutex_unlock(&threads_mutex);
+	debug("end of join_prev_thread(%d)\n", thrd_no);
+	/*** TO BE DONE 7.1 END ***/
+}
 
-/*** TO BE DONE 7.1 END ***/
-
-    }
-
-    void *response_thread(void *vp)
-    {
-	size_t thread_no = ((int *) vp) - connection_no;
-	int connection_idx = *((int *) vp);
-	debug(" ... response_thread() thread_no=%lu, conn_no=%d\n", (unsigned long) thread_no, connection_idx);
+void *response_thread(void *vp)
+{
+	size_t thread_no = ((int *)vp) - connection_no;
+	int connection_idx = *((int *)vp);
+	debug(" ... response_thread() thread_no=%lu, conn_no=%d\n", (unsigned long)thread_no, connection_idx);
 	const size_t i = thread_no - MAX_CONNECTIONS;
 	send_response(client_sockets[connection_idx],
-		      thread_params[i].code,
-		      thread_params[i].cookie,
-		      thread_params[i].is_http1_0,
-		      (int)thread_no,
-		      thread_params[i].filename,
-		      thread_params[i].p_stat);
+				  thread_params[i].code,
+				  thread_params[i].cookie,
+				  thread_params[i].is_http1_0,
+				  (int)thread_no,
+				  thread_params[i].filename,
+				  thread_params[i].p_stat);
 	debug(" ... response_thread() freeing filename and stat\n");
 	free(thread_params[i].filename);
 	free(thread_params[i].p_stat);
 	return NULL;
-    }
+}
 
 #else /* #ifndef INCaPACHE_7_1 */
 
-    pthread_t thread_ids[MAX_CONNECTIONS];
-    int connection_no[MAX_CONNECTIONS];
+pthread_t thread_ids[MAX_CONNECTIONS];
+int connection_no[MAX_CONNECTIONS];
 
 #endif /* ifdef INCaPACHE_7_1 */
 #pragma clang diagnostic push
@@ -150,38 +158,39 @@ void *client_connection_thread(void *vp)
 	socklen_t addr_size;
 #ifdef INCaPACHE_7_1
 	pthread_mutex_lock(&threads_mutex);
-	int connection_no = *((int *) vp);
+	int connection_no = *((int *)vp);
 
 	/*** properly initialize the thread queue to_join ***/
-/*** TO BE DONE 7.1 START ***/
+	/*** TO BE DONE 7.1 START ***/
 
 	to_join[connection_no] = NULL;
 
-/*** TO BE DONE 7.1 END ***/
+	/*** TO BE DONE 7.1 END ***/
 
 	pthread_mutex_unlock(&threads_mutex);
 #endif
-	for (; ;) {
+	for (;;)
+	{
 		addr_size = sizeof(client_addr);
 		pthread_mutex_lock(&accept_mutex);
-		if ((client_fd = accept(listen_fd, (struct sockaddr *) &client_addr, &addr_size)) == -1)
+		if ((client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, &addr_size)) == -1)
 			fail_errno("Cannot accept client connection");
 		pthread_mutex_unlock(&accept_mutex);
 #ifdef INCaPACHE_7_1
 		client_sockets[connection_no] = client_fd;
 #endif
 		char str[INET_ADDRSTRLEN];
-		struct sockaddr_in *ipv4 = (struct sockaddr_in *) &client_addr;
+		struct sockaddr_in *ipv4 = (struct sockaddr_in *)&client_addr;
 		printf("Accepted connection from %s\n", inet_ntop(AF_INET, &(ipv4->sin_addr), str, INET_ADDRSTRLEN));
 		manage_http_requests(client_fd
 #ifdef INCaPACHE_7_1
-				, connection_no
+							 ,
+							 connection_no
 #endif
 		);
 	}
 }
 #pragma clang diagnostic pop
-
 
 char *get_mime_type(char *filename)
 {
@@ -194,9 +203,9 @@ char *get_mime_type(char *filename)
 	debug("      ... get_mime_type(%s): was not .css\n", filename);
 
 	/*** What is missing here to avoid race conditions ? ***/
-/*** TO BE DONE 7.0 START ***/
+	/*** TO BE DONE 7.0 START ***/
 	pthread_mutex_lock(&mime_mutex);
-/*** TO BE DONE 7.0 END ***/
+	/*** TO BE DONE 7.0 END ***/
 
 	fprintf(mime_request_stream, "%s\n", filename);
 	fflush(mime_request_stream);
@@ -205,9 +214,9 @@ char *get_mime_type(char *filename)
 		fail("Could not get answer from file");
 
 	/*** What is missing here to avoid race conditions ? ***/
-/*** TO BE DONE 7.0 START ***/
+	/*** TO BE DONE 7.0 START ***/
 	pthread_mutex_unlock(&mime_mutex);
-/*** TO BE DONE 7.0 END ***/
+	/*** TO BE DONE 7.0 END ***/
 
 	if (mime_t[--nchars_read] == '\n')
 		mime_t[nchars_read] = '\0';
@@ -215,14 +224,13 @@ char *get_mime_type(char *filename)
 	return mime_t;
 }
 
-
 #ifdef INCaPACHE_7_1
 
 void send_resp_thread(int out_socket, int response_code, int cookie,
-		      int is_http1_0, int connection_idx, int new_thread_idx,
-		      char *filename, struct stat *stat_p)
+					  int is_http1_0, int connection_idx, int new_thread_idx,
+					  char *filename, struct stat *stat_p)
 {
-	struct response_params *params =  thread_params + (new_thread_idx - MAX_CONNECTIONS);
+	struct response_params *params = thread_params + (new_thread_idx - MAX_CONNECTIONS);
 	debug(" ... send_resp_thread(): idx=%lu\n", (unsigned long)(params - thread_params));
 	params->code = response_code;
 	params->cookie = cookie;
@@ -234,9 +242,9 @@ void send_resp_thread(int out_socket, int response_code, int cookie,
 	debug(" ... send_resp_thread(): parameters set, conn_no=%d\n", connection_idx);
 
 	/*** enqueue the current thread in the "to_join" data structure ***/
-/*** TO BE DONE 7.1 START ***/
+	/*** TO BE DONE 7.1 START ***/
 	to_join[new_thread_idx] = thread_ids + connection_idx;
-/*** TO BE DONE 7.1 END ***/
+	/*** TO BE DONE 7.1 END ***/
 
 	if (pthread_create(thread_ids + new_thread_idx, NULL, response_thread, connection_no + new_thread_idx))
 		fail_errno("Could not create response thread");
